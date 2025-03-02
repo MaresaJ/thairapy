@@ -1,29 +1,32 @@
 from flask import Flask, request, jsonify
 from transformers import pipeline
 import random
+import os
+import PyPDF2
 
 app = Flask(__name__)
 
 # AI-model
 chatbot = pipeline("text-generation", model="gpt2")
 
-# 🔥 Hier kun je zelf de standaard antwoorden aanpassen
+# Reacties in apart bestand (voorbeeld)
 empathische_reacties = {
     "ik voel me verdrietig": [
         "Dat klinkt zwaar... Wil je er meer over vertellen?",
         "Je bent niet alleen. Hoe kan ik je het beste helpen?",
-        "Het is helemaal oké om je zo te voelen. Al is het natuurlijk prut. Wat maakt dat je het hier deelt? Hoe hoop je dat ik je kan helpen? Want dat doe ik graag."
+        "Het is helemaal oké om je zo te voelen. Wat helpt jou om troost te vinden?"
     ],
     "ik heb stress": [
-        "Stress kan veel energie kosten. Wat helpt jou om te ontspannen?",
-        "Wil je iets delen over wat je stress geeft?"
+        "Stress kan veel energie kosten. Wat geeft je normaal rust?",
+        "Wil je delen wat je het meest bezighoudt?",
+        "Kan ik je helpen met ademhalingsoefeningen of een positieve gedachte?"
     ],
     "ik ben eenzaam": [
-        "Dat lijkt me moeilijk... Met wie/wat voor persoon zou je willen praten, of van wie zou je gezelschap willen hebben? En hoe zou diegene je minder eenzaam doen voelen?"
-
+        "Dat lijkt me moeilijk... Wat helpt jou om je minder eenzaam te voelen?",
+        "Wil je praten over wat je mist in gezelschap?"
     ],
     "ik ben boos": [
-        "Goed dat je het deelt! Wil je er meer over kwijt? Wat maakt je boos?",
+        "Goed dat je dit deelt! Wat maakt je boos?",
         "Boosheid is normaal. Wat zou je helpen om wat rust te vinden?",
         "Soms helpt bewegen, zoals een wandeling maken, om boosheid los te laten."
     ]
@@ -37,24 +40,22 @@ opvolgvraag = [
     "Wat komt er verder in je op?"
 ]
 
-# Geheime troostcode
-troostberichten = [
-    "Je bent waardevol, precies zoals je bent 💜.",
-    "Alles wat je voelt, mag er zijn.",
-    "Je doet het beter dan je zelf denkt.",
-    "Je bent niet alleen, ik ben hier voor je.",
-    "Het is oké om even niet oké te zijn."
-]
+def lees_gespreksvoorbeelden(pdf_path):
+    voorbeelden = []
+    with open(pdf_path, "rb") as file:
+        reader = PyPDF2.PdfReader(file)
+        for pagina in reader.pages:
+            tekst = pagina.extract_text()
+            voorbeelden.append(tekst)
+    return " ".join(voorbeelden)
 
 def empathische_reactie(vraag):
-    if "troost mij" in vraag or "ik heb troost nodig" in vraag:
-        return random.choice(troostberichten)
-
     for keyword in empathische_reacties:
         if keyword in vraag:
             basisreactie = random.choice(empathische_reacties[keyword])
             extra_vraag = random.choice(opvolgvraag)
-            return f"{basisreactie} {extra_vraag}"
+            afsluitboodschap = "Ik ben trots op je dat je dit deelt 💜. Wil je nog iets kwijt?"
+            return f"{basisreactie} {extra_vraag} {afsluitboodschap}"
     return None
 
 @app.route("/")
@@ -66,8 +67,19 @@ def chat():
     data = request.json
     vraag = data["vraag"].lower()
 
+    # Gespreksvoorbeelden uit PDF laden
+    pdf_path = "/app/data/gespreksvoorbeelden.pdf"
+    if os.path.exists(pdf_path):
+        gespreksvoorbeelden = lees_gespreksvoorbeelden(pdf_path)
+        if vraag in gespreksvoorbeelden:
+            return jsonify({"antwoord": "Dat lijkt op iets wat ik herken... Wil je daar meer over delen?"})
+
     reactie = empathische_reactie(vraag)
     if reactie:
+        if "wat zijn opmerkingen die je ooit hebben geholpen?" in vraag:
+            nieuwe_opmerking = vraag.replace("wat zijn opmerkingen die je ooit hebben geholpen?", "").strip()
+            empathische_reacties["persoonlijk"] = empathische_reacties.get("persoonlijk", []) + [nieuwe_opmerking]
+            return jsonify({"antwoord": "Dank je voor het delen! Ik zal dit onthouden 💜."})
         return jsonify({"antwoord": reactie})
 
     # Geen match, gebruik AI-model
@@ -75,4 +87,5 @@ def chat():
     return jsonify({"antwoord": antwoord[0]["generated_text"]})
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=10000)
+    port = int(os.getenv("PORT", 10000))
+    app.run(host="0.0.0.0", port=port)
