@@ -29,7 +29,6 @@ empathische_reacties = {
     ]
 }
 
-
 # Opvolgvraag
 opvolgvraag = [
     "En wat nog meer?",
@@ -38,7 +37,19 @@ opvolgvraag = [
     "Wat komt er verder in je op?"
 ]
 
+# Geheime troostcode
+troostberichten = [
+    "Je bent waardevol, precies zoals je bent 💜.",
+    "Alles wat je voelt, mag er zijn.",
+    "Je doet het beter dan je zelf denkt.",
+    "Je bent niet alleen, ik ben hier voor je.",
+    "Het is oké om even niet oké te zijn."
+]
+
 def empathische_reactie(vraag):
+    if "troost mij" in vraag or "ik heb troost nodig" in vraag:
+        return random.choice(troostberichten)
+
     for keyword in empathische_reacties:
         if keyword in vraag:
             basisreactie = random.choice(empathische_reacties[keyword])
