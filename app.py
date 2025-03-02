@@ -13,22 +13,22 @@ chatbot = pipeline("text-generation", model="gpt2")
 empathische_reacties = {
     "ik voel me verdrietig": [
         "Dat klinkt zwaar... Wil je er meer over vertellen?",
-        "Je bent niet alleen. Hoe kan ik je het beste helpen?",
-        "Het is helemaal oké om je zo te voelen. Wat helpt jou om troost te vinden?"
+        "Je bent niet alleen. Wat gaat er op dit moment door je heen?",
+        "Het is helemaal oké om je zo te voelen. Wat maakt dit moment extra moeilijk voor je?"
     ],
     "ik heb stress": [
-        "Stress kan veel energie kosten. Wat geeft je normaal rust?",
-        "Wil je delen wat je het meest bezighoudt?",
-        "Kan ik je helpen met ademhalingsoefeningen of een positieve gedachte?"
+        "Stress kan veel energie kosten. Wat houdt je op dit moment het meest bezig?",
+        "Wil je iets delen over wat je nu voelt in je lichaam?",
+        "Wat helpt jou normaal om rust te vinden?"
     ],
     "ik ben eenzaam": [
-        "Dat lijkt me moeilijk... Wat helpt jou om je minder eenzaam te voelen?",
-        "Wil je praten over wat je mist in gezelschap?"
+        "Dat lijkt me moeilijk... Wanneer voel je je het minst alleen?",
+        "Wat heb je nodig om je meer verbonden te voelen?"
     ],
     "ik ben boos": [
-        "Goed dat je dit deelt! Wat maakt je boos?",
-        "Boosheid is normaal. Wat zou je helpen om wat rust te vinden?",
-        "Soms helpt bewegen, zoals een wandeling maken, om boosheid los te laten."
+        "Goed dat je dit deelt! Wat maakt je precies boos?",
+        "Welke gedachten komen er in je op als je boos bent?",
+        "Wat zou je op dit moment nodig hebben om je rustiger te voelen?"
     ],
     "compliment": [
         "Je doet het ontzettend goed, vergeet dat niet!",
@@ -42,7 +42,8 @@ opvolgvraag = [
     "En wat nog meer?",
     "Hoe voelt dat voor jou?",
     "Wil je daar iets meer over delen?",
-    "Wat komt er verder in je op?"
+    "Wat komt er verder in je op?",
+    "Wat zou je willen dat er nu verandert?"
 ]
 
 # Complimenten geven op basis van toeval
@@ -65,14 +66,14 @@ def empathische_reactie(vraag):
         if keyword in vraag:
             basisreactie = random.choice(empathische_reacties[keyword])
             extra_vraag = random.choice(opvolgvraag)
-            afsluitboodschap = "Je mag trots op jezelf zijn dat je dit deelt! Wil je nog iets kwijt?"
+            afsluitboodschap = "Goed dat je dit deelt! Wil je nog iets kwijt?"
             compliment = geef_compliment()
             return f"{basisreactie} {extra_vraag} {compliment} {afsluitboodschap}"
     return None
 
 @app.route("/")
 def home():
-    return "Hoi, ik ben de therapiebot 🌿"
+    return "Therapiebot is actief 🌿"
 
 @app.route("/chat", methods=["POST"])
 def chat():
