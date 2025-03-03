@@ -34,7 +34,7 @@ empathische_reacties = {
     ],
     "compliment": [
         "Je doet het ontzettend goed, vergeet dat niet!",
-        "Je bent sterker dan je denkt, ook al voel je dat nu misschien niet zo. Ik ben dan wel een bot, ik kan prima analyseren wanneer iemand een prima persoon is. Je bent hier en je gaat in gesprek, ondanks alles!",
+        "Je bent sterker dan je denkt, ook al voel je dat nu misschien niet zo.",
         "Goed dat je hierover praat, echt!"
     ]
 }
@@ -53,7 +53,6 @@ def geef_compliment():
         return random.choice(empathische_reacties["compliment"])
     return ""
 
-
 def empathische_reactie(vraag):
     for keyword in empathische_reacties:
         if keyword in vraag:
@@ -70,10 +69,10 @@ def home():
 @app.route("/chat", methods=["POST"])
 def chat():
     data = request.json
-    vraag = data["vraag"].lower()
+    vraag = data.get("vraag", "").lower()
 
-    if "Wat zijn opmerkingen die je ooit hebben geholpen?" in vraag:
-        nieuwe_opmerking = vraag.replace("Wat zijn opmerkingen die je ooit hebben geholpen?", "").strip()
+    if "opmerkingen die je ooit hebben geholpen" in vraag:
+        nieuwe_opmerking = vraag.replace("opmerkingen die je ooit hebben geholpen", "").strip()
         persoonlijke_opmerkingen.append(nieuwe_opmerking)
         return jsonify({"antwoord": "Dank je voor het delen! Ik zal dit onthouden."})
 
@@ -85,9 +84,8 @@ def chat():
         eerder_geholpen = random.choice(persoonlijke_opmerkingen)
         return jsonify({"antwoord": f"Eerder gaf je aan dat '{eerder_geholpen}' je geholpen heeft. Zou dat nu ook steun kunnen bieden?"})
 
-    antwoord = generate_response(vraag)
-    return jsonify({"antwoord": antwoord})
+    return jsonify({"antwoord": "Ik hoor je... Wil je iets meer vertellen over wat je voelt?"})
 
 if __name__ == "__main__":
-port = int(os.getenv("PORT"))
-app.run(host="0.0.0.0", port=port)
+    port = int(os.getenv("PORT"))  # Geen fallback
+    app.run(host="0.0.0.0", port=port)
