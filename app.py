@@ -1,5 +1,5 @@
 from flask import Flask, request, jsonify
-from transformers import AutoModelForSeq2SeqLM, AutoTokenizer
+from transformers import pipeline
 import random
 import os
 import PyPDF2
@@ -7,6 +7,8 @@ import PyPDF2
 app = Flask(__name__)
 
 # AI-model
+from transformers import AutoModelForSeq2SeqLM, AutoTokenizer
+
 model_name = "t5-small"
 tokenizer = AutoTokenizer.from_pretrained(model_name)
 model = AutoModelForSeq2SeqLM.from_pretrained(model_name)
@@ -16,7 +18,7 @@ def generate_response(prompt):
     outputs = model.generate(inputs.input_ids, max_length=50, num_return_sequences=1)
     return tokenizer.decode(outputs[0], skip_special_tokens=True)
 
-# Empathische reacties
+# Reacties in apart bestand (voorbeeld)
 empathische_reacties = {
     "ik voel me verdrietig": [
         "Dat klinkt zwaar... Wil je er meer over vertellen?",
@@ -35,28 +37,22 @@ empathische_reacties = {
     "ik ben boos": [
         "Goed dat je dit deelt! Wat maakt je precies boos?",
         "Welke gedachten komen er in je op als je boos bent?",
-        "Wil je even spuien? Helpt dat?"
+        "Wat zou je op dit moment nodig hebben om je rustiger te voelen?"
     ],
     "compliment": [
         "Je doet het ontzettend goed, vergeet dat niet!",
-        "Je bent sterker dan je denkt.",
-        "Het is moedig dat je hierover praat."
+        "Je bent sterker dan je denkt, al voelt dat misschien niet altijd zo.",
+        "Goed dat je hierover praat."
     ]
 }
 
-opvolgvraag = [
-    "En wat nog meer?",
-    "Hoe voelt dat voor jou?",
-    "Wil je daar iets meer over delen?",
-    "Wat komt er verder in je op?",
-    "Wat zou je willen dat er nu verandert?"
-]
-
+# Complimenten geven op basis van toeval
 def geef_compliment():
-    if random.random() < 0.3:
+    if random.random() < 0.3:  # 30% kans op spontaan compliment
         return random.choice(empathische_reacties["compliment"])
     return ""
 
+# Gespreksvoorbeelden uit PDF uitlezen
 def lees_gespreksvoorbeelden(pdf_path):
     voorbeelden = []
     with open(pdf_path, "rb") as file:
@@ -64,8 +60,23 @@ def lees_gespreksvoorbeelden(pdf_path):
         for pagina in reader.pages:
             tekst = pagina.extract_text()
             if tekst:
-                voorbeelden.append(tekst)
-    return " ".join(voorbeelden)
+                voorbeelden.extend(tekst.splitlines())
+    return voorbeelden
+
+pdf_path = "/app/data/gespreksvoorbeelden.pdf"
+gespreksvoorbeelden = lees_gespreksvoorbeelden(pdf_path) if os.path.exists(pdf_path) else []
+
+# Empathische reactie functie
+def empathische_reactie(vraag):
+    for keyword in empathische_reacties:
+        if keyword in vraag:
+            basisreactie = random.choice(empathische_reacties[keyword])
+            compliment = geef_compliment()
+            return f"{basisreactie} {compliment}".strip()
+    for voorbeeld in gespreksvoorbeelden:
+        if voorbeeld.lower() in vraag:
+            return f"{voorbeeld}"
+    return None
 
 @app.route("/")
 def home():
@@ -76,32 +87,13 @@ def chat():
     data = request.json
     vraag = data["vraag"].lower()
 
-    # PDF voorbeelden uitlezen
-    pdf_path = "/app/data/gespreksvoorbeelden.pdf"
-    if os.path.exists(pdf_path):
-        gespreksvoorbeelden = lees_gespreksvoorbeelden(pdf_path)
-        if vraag in gespreksvoorbeelden:
-            return jsonify({"antwoord": "Dat lijkt op iets wat ik herken... Wil je daar meer over delen?"})
+    reactie = empathische_reactie(vraag)
+    if reactie:
+        return jsonify({"antwoord": reactie})
 
-    for keyword in empathische_reacties:
-        if keyword in vraag:
-            basisreactie = random.choice(empathische_reacties[keyword])
-            extra_vraag = random.choice(opvolgvraag)
-            compliment = geef_compliment()
-            afsluitboodschap = "Goed dat je dit deelt! Wil je nog iets kwijt?"
-            return jsonify({"antwoord": f"{basisreactie} {extra_vraag} {compliment} {afsluitboodschap}"})
-
-    if "wat zijn opmerkingen die je ooit hebben geholpen?" in vraag:
-        nieuwe_opmerking = vraag.replace("wat zijn opmerkingen die je ooit hebben geholpen?", "").strip()
-        empathische_reacties["persoonlijk"] = empathische_reacties.get("persoonlijk", []) + [nieuwe_opmerking]
-        return jsonify({"antwoord": "Dank je voor het delen! Ik zal dit onthouden."})
-
+    # Geen match, gebruik AI-model
     antwoord = generate_response(vraag)
     return jsonify({"antwoord": antwoord})
-
-@app.route("/health")
-def health():
-    return "OK", 200
 
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 10000))
