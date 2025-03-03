@@ -1,5 +1,4 @@
-flask
-transformers
+Flask==3.0.0
+transformers==4.39.1
 torch
-PyPDF2
 gunicorn==23.0.0
