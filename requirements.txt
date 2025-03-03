@@ -2,4 +2,4 @@ flask
 transformers
 torch
 PyPDF2
-gunicorn
+gunicorn==23.0.0
